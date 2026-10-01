@@ -1054,7 +1054,7 @@ const ZDEF={
  dakai:{hp:200,sp:17,dps:60,armor:0},cone:{hp:200,sp:17,dps:60,armor:260},helmet:{hp:200,sp:17,dps:60,armor:620},
  legs:{hp:170,sp:46,dps:60,armor:0},hands:{hp:560,sp:12,dps:115,armor:0},head:{hp:50,sp:26,dps:22,armor:0},
  shadow:{hp:150,sp:34,dps:55,armor:0},dj:{hp:320,sp:14,dps:55,armor:0},sky:{hp:230,sp:17,dps:60,armor:0},
- boss:{hp:120000,sp:6,dps:600,armor:600}};
+ boss:{hp:120000,sp:6,dps:600,armor:6000}};
 const ZORD=['dakai','cone','helmet','legs','hands','shadow','dj','sky','boss'];
 const WAVES1=[
  ['dakai'],['dakai','dakai'],['dakai','cone'],['dakai','legs','cone'],['dakai','dakai','cone','legs'],
@@ -1147,7 +1147,7 @@ function addGrave(instant){
 }
 function skyCol(row) {
     // 從後三格 (索引 6, 7, 8) 中隨機挑選一個欄位降落
-    const backCols = [4, 5, 6, 7];
+    const backCols = [6, 7, 8];
     return backCols[Math.floor(Math.random() * backCols.length)];
 }
 function spawnZ(type,row,x=W+40){
