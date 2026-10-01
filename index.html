@@ -1054,7 +1054,7 @@ const ZDEF={
  dakai:{hp:200,sp:17,dps:60,armor:0},cone:{hp:200,sp:17,dps:60,armor:260},helmet:{hp:200,sp:17,dps:60,armor:620},
  legs:{hp:170,sp:46,dps:60,armor:0},hands:{hp:560,sp:12,dps:115,armor:0},head:{hp:50,sp:26,dps:22,armor:0},
  shadow:{hp:150,sp:34,dps:55,armor:0},dj:{hp:320,sp:14,dps:55,armor:0},sky:{hp:230,sp:17,dps:60,armor:0},
- boss:{hp:12000,sp:5,dps:480,armor:50}};
+ boss:{hp:120000,sp:5,dps:480,armor:500}};
 const ZORD=['dakai','cone','helmet','legs','hands','shadow','dj','sky','boss'];
 const WAVES1=[
  ['dakai'],['dakai','dakai'],['dakai','cone'],['dakai','legs','cone'],['dakai','dakai','cone','legs'],
@@ -1072,14 +1072,27 @@ const WAVES3=[
  ['hands','helmet','dj','dj','cone','legs','dakai'],
  ['hands','hands','helmet','dj','dj','cone','cone','legs','dakai','dakai','dakai']];
 const WAVES4=[
- ['dakai','sky'],['cone','sky','dakai'],['sky','legs','cone'],['helmet','sky','dakai','sky'],['hands','sky','cone','legs'],
- ['sky','sky','helmet','legs','cone'],['hands','helmet','sky','sky','legs','dakai'],['hands','helmet','cone','sky','sky','legs','legs'],
- ['hands','helmet','sky','sky','sky','cone','legs','dakai'],
- ['hands','hands','helmet','helmet','sky','sky','sky','cone','legs','legs','dakai','dakai']];
+ ['dakai','cone','legs'],
+ // 【第二階段召喚 1】大幅增加殭屍數量
+ ['cone','cone','shadow','shadow','dj','dj','dakai','dakai','legs','legs'],
+ // 【第二階段召喚 2】加入更多堅固與高危險殭屍
+ ['helmet','helmet','sky','sky','sky','legs','legs','shadow','shadow','dakai','hands'],
+ ['hands','dj','cone','sky','shadow'],
+ ['helmet','hands','dj','shadow','sky','legs'],
+ ['hands','helmet','dj','shadow','shadow','sky','cone','legs'],
+ ['hands','hands','helmet','dj','sky','sky','shadow','shadow','cone','legs']
+];
 const WAVES5=[
- ['dakai','cone','legs'],['cone','shadow','dj','dakai'],['helmet','sky','legs','shadow','dakai'],['hands','dj','cone','sky','shadow'],
- ['helmet','hands','dj','shadow','sky','legs'],['hands','helmet','dj','shadow','shadow','sky','cone','legs'],
- ['hands','hands','helmet','dj','sky','sky','shadow','shadow','cone','legs']];
+ ['dakai','cone','legs'],
+ // 【第二階段召喚 1】大幅增加殭屍數量
+ ['cone','cone','shadow','shadow','dj','dj','dakai','dakai','legs','legs'],
+ // 【第二階段召喚 2】加入更多堅固與高危險殭屍
+ ['helmet','helmet','sky','sky','sky','legs','legs','shadow','shadow','dakai','hands'],
+ ['hands','dj','cone','sky','shadow'],
+ ['helmet','hands','dj','shadow','sky','legs'],
+ ['hands','helmet','dj','shadow','shadow','sky','cone','legs'],
+ ['hands','hands','helmet','dj','sky','sky','shadow','shadow','cone','legs']
+];
 const STG=[
  {cards:['ding','jie','bao','lion'],bank:150,sky:[7,10],t0:24,gap:17,waves:WAVES1},
  {cards:['ding','jie','bao','lion','lulu'],bank:100,sky:[15,21],t0:30,gap:17,shadows:true,waves:WAVES2},
@@ -1127,7 +1140,9 @@ function tileAt(x,y){const c=Math.floor((x-X0)/CW),r=Math.floor((y-slope(x)-Y0)/
 function addFx(o){o.t=0;G.fx.push(o)}
 function dust(x,y,n,col,sp=60){for(let i=0;i<n;i++)addFx({k:'dust',x,y,vx:rnd(-sp,sp),vy:rnd(-sp*1.4,-10),g:260,max:rnd(.35,.7),r:rnd(2,5),col})}
 function floatText(x,y,s,col){addFx({k:'text',x,y,s,col,max:1.3})}
-function addPuff(x,y,gold,mode,ty,vx=0,vy=0,val){G.puffs.push({x,y,vx,vy,gold,v:val||(gold?75:25),moon:val===15,mode,ty,landed:false,life:11})}
+function addPuff(x,y,gold,mode,ty,vx=0,vy=0,val,poison=false){
+  G.puffs.push({x,y,vx,vy,gold,v:poison?(val||-50):(val||(gold?75:25)),moon:val===15,poison,mode,ty,landed:false,life:11});
+}
 function litZ(z){return G.plants.some(p=>p.id==='lulu'&&!(p.ban>0)&&Math.abs(p.r-z.row)<=1&&Math.abs(p.cx-z.x)<=CW*1.5+10)}
 function shadowAt(c,r){
  if(!(G.cfg.shadows&&G.shadow[r][c])&&!(G.blackout>0))return false;
@@ -1147,7 +1162,7 @@ function addGrave(instant){
 }
 function skyCol(row) {
     // 從後三格 (索引 6, 7, 8) 中隨機挑選一個欄位降落
-    const backCols = [6, 7, 8];
+    const backCols = [4, 5, 6, 7];
     return backCols[Math.floor(Math.random() * backCols.length)];
 }
 function spawnZ(type,row,x=W+40){
@@ -1224,30 +1239,46 @@ function doSmash(z){
  for(let k=-1;k<=1;k++)for(let x=z.zx0;x<z.zx1;x+=70)dust(x,rowY(z.row+k),3,'#c9a46a',90);
 }
 function bossAI(z,dt){
- const r=z.hp/z.max,ph=r>.66?1:(r>.33?2:3);
- if(ph>z.phase){z.phase=ph;G.eb={k:ph===2?'phase2':'phase3',t:3.4};Aud.sfx('boss');G.shake=.5;summon(z,2)}
- z.slam=Math.max(0,z.slam-dt);
- if(z.sk==='smash'){
-  z.skt-=dt;z.pose=clamp(1-z.skt/1.1,0,1);
-  if(z.skt<=0){doSmash(z);z.sk=null;z.pose=0;z.slam=.35;z.cd=rnd(3.8,5.2)-(z.phase-1)*.8}
-  return;
+  const r=z.hp/z.max,ph=r>.66?1:(r>.33?2:3);
+  if(ph>z.phase){z.phase=ph;G.eb={k:ph===2?'phase2':'phase3',t:3.4};Aud.sfx('boss');G.shake=.5;summon(z,2)}
+  z.slam=Math.max(0,z.slam-dt);
+  if(z.sk==='smash'){
+   z.skt-=dt;z.pose=clamp(1-z.skt/1.1,0,1);
+   if(z.skt<=0){doSmash(z);z.sk=null;z.pose=0;z.slam=.35;z.cd=rnd(3.8,5.2)-(z.phase-1)*.8}
+   return;
+  }
+  if(z.x>780)return;
+  z.cd-=dt;
+  if(z.cd>0)return;
+  
+  // 修改這裡：在第 2、3 階段加入 'poison' 招式
+  const pool=['smash','sub'];if(z.phase>=2)pool.push('demo','poison');if(z.phase>=3)pool.push('sky');
+  
+  let k;do{k=pool[Math.floor(Math.random()*pool.length)]}while(k===z.last&&pool.length>1);
+  z.last=k;
+  if(k==='smash'){z.sk='smash';z.skt=1.1;z.zx0=Math.max(X0-10,z.x-250);z.zx1=z.x-5;Aud.sfx('warn');return}
+  if(k==='sub')summon(z,3);
+  
+  // 修改這裡：新增 poison 招式的實際運作與灑毒泡芙數量
+  else if(k==='poison'){
+   floatText(z.x-40,rowY(z.row)-210,'毒泡芙來襲!','#c9a0ff');
+   Aud.sfx('warn');
+   const count = z.phase >= 3 ? 6 : 4;
+   for(let i = 0; i < count; i++){
+    const tr = Math.floor(rnd(0, ROWS));
+    addPuff(z.x - 30, rowY(z.row) - 80, false, 'arc', rowY(tr), rnd(-150, -50), rnd(-220, -120), -50, true);
+   }
+  }
+  
+  else if(k==='demo'){
+   const ts=shuffle(G.plants.filter(p=>p.id!=='pot'&&!(p.ban>0)));
+   ts.slice(0,z.phase>=3?3:2).forEach(p=>{p.ban=7;floatText(p.cx,p.fy-90,T().msg.demo,'#ff6a5a');dust(p.cx,p.fy-40,8,'#ff4040',70)});
+   if(ts.length)Aud.sfx('ban');
+  }else if(k==='sky'){
+   const rows=shuffle([0,1,2,3,4]);for(let i=0;i<(z.phase>=3?3:2);i++)spawnZ('sky',rows[i]);Aud.sfx('warn');
+  }
+  z.cd=rnd(3.8,5.2)-(z.phase-1)*.8;
  }
- if(z.x>780)return;
- z.cd-=dt;
- if(z.cd>0)return;
- const pool=['smash','sub'];if(z.phase>=2)pool.push('demo');if(z.phase>=3)pool.push('sky');
- let k;do{k=pool[Math.floor(Math.random()*pool.length)]}while(k===z.last&&pool.length>1);
- z.last=k;
- if(k==='smash'){z.sk='smash';z.skt=1.1;z.zx0=Math.max(X0-10,z.x-250);z.zx1=z.x-5;Aud.sfx('warn');return}
- if(k==='sub')summon(z,3);
- else if(k==='demo'){
-  const ts=shuffle(G.plants.filter(p=>p.id!=='pot'&&!(p.ban>0)));
-  ts.slice(0,z.phase>=3?3:2).forEach(p=>{p.ban=7;floatText(p.cx,p.fy-90,T().msg.demo,'#ff6a5a');dust(p.cx,p.fy-40,8,'#ff4040',70)});
-  if(ts.length)Aud.sfx('ban');
- }else if(k==='sky'){
-  const rows=shuffle([0,1,2,3,4]);for(let i=0;i<(z.phase>=3?3:2);i++)spawnZ('sky',rows[i]);Aud.sfx('warn');
- }
- z.cd=rnd(3.8,5.2)-(z.phase-1)*.8;
 }
 function landSky(z){
  z.air=0;dust(z.x,rowY(z.row)+slope(z.x),10,'#bbb',90);Aud.sfx('stomp');
@@ -1452,13 +1483,20 @@ function update(dt){
  }
  G.projs=G.projs.filter(b=>!b.done);
  /* ---------- puffs ---------- */
- for(const q of G.puffs){
-  if(!q.landed){
-   if(q.mode==='fall'){q.y+=80*dt;if(q.y>=q.ty){q.y=q.ty;q.landed=true}}
-   else{q.vy+=520*dt;q.x+=q.vx*dt;q.y+=q.vy*dt;if(q.vy>0&&q.y>=q.ty){q.y=q.ty;q.landed=true}}
-  }else q.life-=dt;
- }
- G.puffs=G.puffs.filter(q=>q.life>0);
+for(const q of G.puffs){
+  if(q.landed&&q.life<3&&Math.floor(ANIM*8)%2)continue;
+  const bob=q.landed?Math.sin(ANIM*4+q.x)*2:0;
+  if(q.poison){
+    // 毒泡芙：紫色光暈 + 毒氣顏色
+    ctx.save();
+    ell(ctx,q.x,q.y+bob,20,20,'rgba(180,40,255,.55)',0);
+    drawPuff(ctx,q.x,q.y+bob,false,false,ANIM);
+    ctx.restore();
+  }else if(q.moon){
+    ell(ctx,q.x,q.y+bob,19,19,'rgba(150,200,255,.5)',0);
+    drawPuff(ctx,q.x,q.y+bob,.8,false,ANIM);
+  }else drawPuff(ctx,q.x,q.y+bob,q.gold?1.05:1,q.gold,ANIM);
+}
  /* ---------- fx ---------- */
  for(const f of G.fx){f.t+=dt;if(f.k==='dust'){f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=f.g*dt}}
  G.fx=G.fx.filter(f=>f.t<f.max);
@@ -1847,8 +1885,15 @@ cv.addEventListener('pointerdown',e=>{
  for(let i=G.puffs.length-1;i>=0;i--){
   const q=G.puffs[i];
   if(Math.abs(q.x-x)<28&&Math.abs(q.y-y)<28){
-   G.bank+=q.v;Aud.sfx('collect');floatText(q.x,q.y-20,'+'+q.v,q.gold?'#ffe14a':'#fff');
-   G.puffs.splice(i,1);return;
+    if(q.poison){
+      G.bank=Math.max(0,G.bank+q.v);
+      Aud.sfx('no');
+      floatText(q.x,q.y-20,q.v+' 泡芙!','#ff4a4a');
+    }else{
+      G.bank+=q.v;Aud.sfx('collect');
+      floatText(q.x,q.y-20,'+'+q.v,q.gold?'#ffe14a':'#fff');
+    }
+    G.puffs.splice(i,1);return;
   }
  }
  // cards
